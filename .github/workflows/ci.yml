@@ -1,0 +1,42 @@
+name: CI Build
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  frontend-build:
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build frontend
+        working-directory: frontend
+        run: npm run build
+
+  # Backend build job will be added when backend is ready
+  # backend-build:
+  #   runs-on: self-hosted
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - name: Setup JDK 25
+  #       uses: actions/setup-java@v4
+  #       with:
+  #         java-version: '25'
+  #         distribution: 'temurin'
+  #         cache: 'maven'
+  #     - name: Build backend
+  #       run: mvn clean compile
+  #     - name: Run tests
+  #       run: mvn test

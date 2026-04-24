@@ -1,0 +1,71 @@
+stages:
+  - build
+  - deploy
+
+variables:
+  NODE_VERSION: "20"
+  JAVA_VERSION: "17"
+
+# Frontend build job - runs on merge requests and pushes to main
+frontend-build:
+  stage: build
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == "main"
+  image: node:20-alpine
+  cache:
+    key: ${CI_COMMIT_REF_SLUG}-frontend
+    paths:
+      - frontend/node_modules/
+  before_script:
+    - cd frontend
+  script:
+    - npm ci
+    - npm run build
+  artifacts:
+    paths:
+      - frontend/dist/
+    expire_in: 1 hour
+
+# Backend build job - runs on merge requests and pushes to main
+backend-build:
+  stage: build
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == "main"
+  image: maven:3.9-eclipse-temurin-17
+  cache:
+    key: ${CI_COMMIT_REF_SLUG}-maven
+    paths:
+      - .m2/repository/
+  variables:
+    MAVEN_OPTS: "-Dmaven.repo.local=.m2/repository"
+  script:
+    - mvn clean compile
+    - mvn test
+  artifacts:
+    paths:
+      - target/
+    expire_in: 1 hour
+
+# Deploy job - runs only on main branch after successful builds
+deploy:
+  stage: deploy
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+      when: manual
+  needs:
+    - frontend-build
+    - backend-build
+  script:
+    - echo "Deploying frontend..."
+    # Add your deployment commands here, e.g.:
+    # - rm -rf /var/www/amock/*
+    # - cp -r frontend/dist/* /var/www/amock/
+    - echo "Deploying backend..."
+    # - systemctl stop amock-backend || true
+    # - cp target/*.jar /opt/amock/amock.jar
+    # - systemctl start amock-backend
+  environment:
+    name: production
+    url: https://your-domain.com
